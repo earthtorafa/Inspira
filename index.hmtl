@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inspira - App de Bem-estar e Produtividade</title>
+  <!-- React, ReactDOM, Babel, Tailwind e Lucide (ícones) CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --font-size: 16px;
+      --background: #ffffff;
+      --foreground: #232323;
+      --card: #ffffff;
+      --card-foreground: #232323;
+      --primary: #030213;
+      --primary-foreground: #fff;
+      --secondary: #e0e7ff;
+      --secondary-foreground: #030213;
+      --muted: #ececf0;
+      --muted-foreground: #717182;
+      --accent: #e9ebef;
+      --accent-foreground: #030213;
+      --destructive: #d4183d;
+      --destructive-foreground: #ffffff;
+      --border: rgba(0, 0, 0, 0.1);
+      --input-background: #f3f3f5;
+      --font-weight-medium: 500;
+      --font-weight-normal: 400;
+      --ring: #5475ff;
+      --radius: 0.625rem;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0; padding: 0;
+      background-color: var(--background);
+      color: var(--foreground);
+      font-size: var(--font-size);
+      line-height: 1.5;
+    }
+    * { box-sizing: border-box; }
+    .header {
+      position: sticky; top: 0; width: 100%; z-index: 40;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(8px);
+    }
+    .header-content { display: flex; align-items: center; justify-content: space-between; height: 4rem; padding: 0 1rem; }
+    .logo { font-size: 1.25rem; font-weight: 700; background: linear-gradient(to right, #2563eb, #9333ea); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .navigation { position: fixed; bottom: 0; left: 0; right: 0;
+      background: #fff; border-top: 1px solid var(--border); z-index: 40; padding: 0.75rem 0;
+    }
+    .nav-item { display: flex; flex-direction: column; align-items: center; padding: 0.5rem; cursor: pointer; color: var(--muted-foreground); transition: color .2s;}
+    .nav-item.active, .nav-item:hover { color: var(--primary);}
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.7rem 1.2rem; border-radius: var(--radius); font-weight: var(--font-weight-medium); transition: 0.15s; border:none; cursor:pointer; text-decoration:none;}
+    .btn-primary { background: var(--primary); color: var(--primary-foreground);}
+    .btn-outline { background: transparent; border:1px solid var(--border); color: var(--foreground);}
+    .btn-ghost { background: transparent; color: var(--foreground);}
+    .btn-ghost:hover { background: var(--accent);}
+    .card { background: var(--card); border:1px solid var(--border); border-radius: var(--radius); box-shadow: 0 1px 8px #0001; margin-bottom: 1.5rem;}
+    .avatar { display: flex; align-items: center; justify-content: center; width: 4rem; height: 4rem; border-radius: 50%; background: var(--muted); color: var(--muted-foreground);}
+    .progress-bar { width: 100%; height: .5rem; background: var(--muted); border-radius: 9999px; overflow: hidden;}
+    .progress-fill { height: 100%; background: var(--primary); transition: width .3s;}
+    .modal-overlay { position: fixed; inset: 0; background:rgba(0,0,0,0.5); z-index: 50; display: flex; align-items:center; justify-content:center;}
+    .modal-content { background: #fff; border-radius: var(--radius); box-shadow: 0 6px 32px #0003; width: 95vw; max-width:500px; max-height: 90vh; overflow-y:auto;}
+    @media (min-width:500px) {
+      .modal-content { width: 100%;}
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+
+    // Utilitário para juntar classes
+    const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+    // Ícones Lucide
+    const {
+      Home, User, Sparkles, Play, Pause, Volume2, Heart,
+      Clock, Activity, ArrowRight, PlusCircle, CheckCircle, X, Users
+    } = lucide;
+
+    // Modal (genérico)
+    function Modal({ isOpen, onClose, children, title }) {
+      if (!isOpen) return null;
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={e=>e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">{title}</h2>
+              <button onClick={onClose} className="btn btn-ghost btn-sm"><X size={16}/></button>
+            </div>
+            <div className="p-6">{children}</div>
+          </div>
+        </div>
+      );
+    }
+
+    // Perfil Modal
+    function ProfileModal({ isOpen, onClose }) {
+      const userStats = { level: 8, points: 1250, streak: 12, sessions: 47, weeklyGoal: 5, completed: 3 };
+      const achievements = [
+        { id:1, title:'Primeira Meditação', icon:'🧘‍♀️', unlocked:true },
+        { id:2, title:'Sequência de 7 dias', icon:'🔥', unlocked:true },
+        { id:3, title:'Criativo Iniciante', icon:'🎨', unlocked:true },
+        { id:4, title:'Mestre do Foco', icon:'🎯', unlocked:false },
+        { id:5, title:'Zen Master', icon:'☯️', unlocked:false },
+        { id:6, title:'Criador Ativo', icon:'✨', unlocked:false }
+      ];
+      return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Perfil">
+          <div className="space-y-6">
+            <div className="text-center">
+              <div className="avatar mx-auto mb-4"><User size={32}/></div>
+              <h3 className="text-xl font-semibold mb-2">Usuário Inspirado</h3>
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <span className="bg-blue-100 px-2 py-1 rounded-full text-sm">Nível {userStats.level}</span>
+                <span className="border px-2 py-1 rounded-full text-sm">{userStats.points} pts</span>
+              </div>
+            </div>
+            <div className="card p-4">
+              <h4 className="font-semibold mb-4">Estatísticas</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center">
+                  <div className="text-2xl font-semibold text-primary">{userStats.streak}</div>
+                  <div className="text-sm text-gray-400">Dias seguidos</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-semibold text-primary">{userStats.sessions}</div>
+                  <div className="text-sm text-gray-400">Sessões totais</div>
+                </div>
+              </div>
+              <div className="mt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium">Meta Semanal</span>
+                  <span className="text-sm text-gray-400">{userStats.completed}/{userStats.weeklyGoal}</span>
+                </div>
+                <div className="progress-bar">
+                  <div className="progress-fill" style={{ width: (userStats.completed/userStats.weeklyGoal*100)+'%' }}></div>
+                </div>
+              </div>
+            </div>
+            <div className="card p-4">
+              <h4 className="font-semibold mb-4">Conquistas</h4>
+              <div className="grid grid-cols-2 gap-3">
+                {achievements.map(a=>(
+                  <div key={a.id} className={cn("p-3 rounded-lg border text-center",a.unlocked?"border-blue-400 bg-blue-100":"border-gray-300 opacity-50")}>
+                    <div className="text-2xl mb-1">{a.icon}</div>
+                    <div className="text-xs font-medium">{a.title}</div>
+                    {a.unlocked&&<CheckCircle size={12} className="mx-auto mt-1 text-blue-700" />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Modal>
+      );
+    }
+
+    // Navegação inferior
+    function Navigation({ activeSection, onSectionChange }) {
+      const sections = [
+        { id:'home', label:'Home', icon:Home },
+        { id:'equilibrio', label:'Equilíbrio', icon:Heart },
+        { id:'fluxo', label:'Fluxo', icon:Activity },
+        { id:'ritmo', label:'Ritmo', icon:Clock },
+        { id:'social', label:'Social', icon:Users }
+      ];
+      return (
+        <nav className="navigation">
+          <div className="flex justify-around">
+            {sections.map(s=>{
+              const Icon = s.icon;
+              return (
+                <button key={s.id} onClick={()=>onSectionChange(s.id)} className={cn("nav-item",activeSection===s.id&&"active")}>
+                  <Icon size={20}/>
+                  <span className="mt-1 text-xs">{s.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+      );
+    }
+
+    // Tela principal Home (apenas exemplo simples visual)
+    function Home({ onOpenProfile }) {
+      const userName = "Usuário";
+      const now = new Date(); 
+      let saudacao = "Bom dia";
+      if (now.getHours()>=12 && now.getHours()<18) saudacao = "Boa tarde";
+      if (now.getHours()>=18) saudacao = "Boa noite";
+      return (
+        <div className="space-y-6 pb-24">
+          <div className="card p-6 bg-blue-100">
+            <div className="text-center">
+              <div className="text-4xl mb-2">👋</div>
+              <h1 className="text-2xl font-semibold mb-2">{saudacao}, {userName}!</h1>
+              <p className="text-gray-400">Como você gostaria de se inspirar hoje?</p>
+            </div>
+          </div>
+          <div className="card p-4">
+            <button className="btn btn-outline w-full flex items-center justify-center gap-2">
+              <PlusCircle size={20}/> Compartilhar inspiração
+            </button>
+          </div>
+          <div className="card p-4">
+            <h2 className="text-lg font-semibold mb-2 flex items-center gap-2">
+              <Sparkles size={20}/> Sugestões para você
+            </h2>
+            <ul className="list-disc pl-5 text-gray-500 space-y-2 text-sm">
+              <li>Pratique uma meditação curta</li>
+              <li>Tente uma atividade criativa</li>
+              <li>Conecte-se com a comunidade</li>
+            </ul>
+          </div>
+        </div>
+      );
+    }
+
+    // Aplicação principal
+    function App() {
+      const [activeSection, setActiveSection] = React.useState('home');
+      const [profileModal, setProfileModal] = React.useState(false);
+      return (
+        <div className="min-h-screen bg-white">
+          <header className="header">
+            <div className="header-content">
+              <span className="logo">Inspira</span>
+              <button className="btn btn-ghost" onClick={()=>setProfileModal(true)}>
+                <User size={22}/>
+              </button>
+            </div>
+          </header>
+          <main className="container mx-auto pt-6 px-4">
+            {activeSection==="home" && <Home />}
+            {/* Você pode adicionar as outras telas se desejar */}
+          </main>
+          <Navigation activeSection={activeSection} onSectionChange={setActiveSection}/>
+          <ProfileModal isOpen={profileModal} onClose={()=>setProfileModal(false)}/>
+        </div>
+      );
+    }
+
+    // Renderizar no elemento root
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  </script>
+</body>
+</html>
